@@ -74,10 +74,9 @@ public class Send extends AppCompatActivity {
                 String ms = msg_textView.getText().toString();
                 byte[] b = ms.getBytes();
                 bytesPayload = Payload.fromBytes(b);
+                startDiscovery();
             }
         });
-
-        startDiscovery();
     }
 
     /** Returns true if the app was granted all the permissions. Otherwise, returns false. */
