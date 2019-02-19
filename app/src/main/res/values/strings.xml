@@ -4,4 +4,5 @@
     <string name="send_receive_title">Send and Receive Files</string>
     <string name="send_button_name">Send</string>
     <string name="receive_button_name">Receive</string>
+    <string name="error_missing_permissions">Cannot start without required permissions</string>
 </resources>

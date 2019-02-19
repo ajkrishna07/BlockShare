@@ -29,7 +29,7 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate.Status;
 import com.google.android.gms.nearby.connection.Strategy;
 
-public class SendReceive extends AppCompatActivity {
+public class Send extends AppCompatActivity {
 
     private static final String[] REQUIRED_PERMISSIONS =
             new String[] {
@@ -50,9 +50,8 @@ public class SendReceive extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_send_receive);
+        setContentView(R.layout.activity_send);
         connectionsClient = Nearby.getConnectionsClient(this);
-
     }
 
     @Override
@@ -63,20 +62,7 @@ public class SendReceive extends AppCompatActivity {
             requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);
         }
 
-        final Button send_button = findViewById(R.id.send_button);
-        send_button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View sv) {
-                final Intent sendIntent = new Intent(getApplicationContext(), Send.class);
-                startActivity(sendIntent);
-            }
-        });
-
-        final Button receive_button = findViewById(R.id.receive_button);
-        receive_button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View rv) {
-                startAdvertising();
-            }
-        });
+        startDiscovery();
     }
 
     /** Returns true if the app was granted all the permissions. Otherwise, returns false. */
@@ -111,9 +97,9 @@ public class SendReceive extends AppCompatActivity {
         recreate();
     }
 
-    private void startAdvertising() {
-        AdvertisingOptions advertisingOptions = new AdvertisingOptions.Builder().setStrategy(STRATEGY).build();
-        connectionsClient.startAdvertising(codeName, getPackageName(), connectionLifecycleCallback, advertisingOptions);
+    private void startDiscovery() {
+        // Note: Discovery may fail. To keep this demo simple, we don't handle failures.
+        connectionsClient.startDiscovery(getPackageName(), endpointDiscoveryCallback, new DiscoveryOptions.Builder().setStrategy(STRATEGY).build());
     }
 
     private final EndpointDiscoveryCallback endpointDiscoveryCallback =
@@ -141,6 +127,8 @@ public class SendReceive extends AppCompatActivity {
                         connectionsClient.stopDiscovery();
                         connectionsClient.stopAdvertising();
                         opponentEndpointId = endpointId;
+                        Payload bytesPayload = Payload.fromBytes(new byte[] {'h', 'e', 'l', 'l', 'o'});
+                        Nearby.getConnectionsClient(context).sendPayload(endpointId, bytesPayload);
                     }
                 }
 
@@ -155,17 +143,12 @@ public class SendReceive extends AppCompatActivity {
             new PayloadCallback() {
                 @Override
                 public void onPayloadReceived(String endpointId, Payload payload) {
-                    byte[] receivedBytes = payload.asBytes();
-                    Context context = getApplicationContext();
-                    String text = new String(receivedBytes);
-                    int duration = Toast.LENGTH_SHORT;
-                    Toast toast = Toast.makeText(context, text, duration);
-                    toast.show();
+                    //
                 }
 
                 @Override
                 public void onPayloadTransferUpdate(String endpointId, PayloadTransferUpdate update) {
                     //
-                    }
+                }
             };
 }
