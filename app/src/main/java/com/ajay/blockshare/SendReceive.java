@@ -51,13 +51,13 @@ public class SendReceive extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_send_receive);
-        connectionsClient = Nearby.getConnectionsClient(this);
 
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        connectionsClient = Nearby.getConnectionsClient(this);
 
         if (!hasPermissions(this, REQUIRED_PERMISSIONS)) {
             requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);

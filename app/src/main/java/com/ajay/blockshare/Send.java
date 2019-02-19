@@ -7,6 +7,8 @@ import android.view.View;
 import android.content.Intent;
 import android.Manifest;
 import android.util.Log;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.content.pm.PackageManager;
 import androidx.annotation.CallSuper;
@@ -46,21 +48,34 @@ public class Send extends AppCompatActivity {
     private String opponentEndpointId;
     private String opponentName;
     Context context = this;
+    private Button msg_send_button;
+    private EditText msg_textView;
+    private Payload bytesPayload;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_send);
-        connectionsClient = Nearby.getConnectionsClient(this);
+        msg_send_button = findViewById(R.id.msg_send_button);
+        msg_textView = findViewById(R.id.editText);
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        connectionsClient = Nearby.getConnectionsClient(this);
 
         if (!hasPermissions(this, REQUIRED_PERMISSIONS)) {
             requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);
         }
+        msg_send_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View sv) {
+                String ms = msg_textView.getText().toString();
+                byte[] b = ms.getBytes();
+                bytesPayload = Payload.fromBytes(b);
+            }
+        });
 
         startDiscovery();
     }
@@ -127,7 +142,6 @@ public class Send extends AppCompatActivity {
                         connectionsClient.stopDiscovery();
                         connectionsClient.stopAdvertising();
                         opponentEndpointId = endpointId;
-                        Payload bytesPayload = Payload.fromBytes(new byte[] {'h', 'e', 'l', 'l', 'o'});
                         Nearby.getConnectionsClient(context).sendPayload(endpointId, bytesPayload);
                     }
                 }
