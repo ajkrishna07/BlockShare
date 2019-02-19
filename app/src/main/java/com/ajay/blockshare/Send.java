@@ -69,12 +69,15 @@ public class Send extends AppCompatActivity {
         if (!hasPermissions(this, REQUIRED_PERMISSIONS)) {
             requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);
         }
+
+        startDiscovery();
+
         msg_send_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View sv) {
                 String ms = msg_textView.getText().toString();
                 byte[] b = ms.getBytes();
                 bytesPayload = Payload.fromBytes(b);
-                startDiscovery();
+                connectionsClient.sendPayload(opponentEndpointId, bytesPayload);
             }
         });
     }
@@ -141,7 +144,10 @@ public class Send extends AppCompatActivity {
                         connectionsClient.stopDiscovery();
                         connectionsClient.stopAdvertising();
                         opponentEndpointId = endpointId;
-                        Nearby.getConnectionsClient(context).sendPayload(endpointId, bytesPayload);
+                        String text = "Connection established with " + opponentEndpointId;
+                        int duration = Toast.LENGTH_SHORT;
+                        Toast toast = Toast.makeText(context, text, duration);
+                        toast.show();
                     }
                 }
 
