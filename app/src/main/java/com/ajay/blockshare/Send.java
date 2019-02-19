@@ -82,6 +82,12 @@ public class Send extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onDestroy() {
+        connectionsClient.stopAllEndpoints();
+        super.onDestroy();
+    }
+
     /** Returns true if the app was granted all the permissions. Otherwise, returns false. */
     private static boolean hasPermissions(Context context, String... permissions) {
         for (String permission : permissions) {
