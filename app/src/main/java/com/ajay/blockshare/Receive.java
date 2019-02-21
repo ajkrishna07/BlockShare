@@ -1,7 +1,9 @@
 package com.ajay.blockshare;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import android.content.DialogInterface;
 import android.widget.Button;
 import android.view.View;
 import android.content.Intent;
@@ -120,9 +122,23 @@ public class Receive extends AppCompatActivity {
     private final ConnectionLifecycleCallback connectionLifecycleCallback =
             new ConnectionLifecycleCallback() {
                 @Override
-                public void onConnectionInitiated(String endpointId, ConnectionInfo connectionInfo) {
-                    connectionsClient.acceptConnection(endpointId, payloadCallback);
-                    opponentName = connectionInfo.getEndpointName();
+                public void onConnectionInitiated(String endpointId, ConnectionInfo info) {
+                    new AlertDialog.Builder(context)
+                            .setTitle("Accept connection to " + info.getEndpointName())
+                            .setMessage("Confirm the code matches on both devices: " + info.getAuthenticationToken())
+                            .setPositiveButton(
+                                    "Accept",
+                                    (DialogInterface dialog, int which) ->
+                                            // The user confirmed, so we can accept the connection.
+                                            connectionsClient.acceptConnection(endpointId, payloadCallback))
+                            .setNegativeButton(
+                                    android.R.string.cancel,
+                                    (DialogInterface dialog, int which) ->
+                                            // The user canceled, so we should reject the connection.
+                                            connectionsClient.rejectConnection(endpointId))
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show();
+                    opponentName = info.getEndpointName();
                 }
 
                 @Override
@@ -132,6 +148,8 @@ public class Receive extends AppCompatActivity {
                         connectionsClient.stopAdvertising();
                         opponentEndpointId = endpointId;
                         statusMessage.setText("Connected to " + opponentEndpointId);
+                        Toast toast = Toast.makeText(context, "Connection established with " + opponentEndpointId, Toast.LENGTH_LONG);
+                        toast.show();
                     }
                 }
 
