@@ -80,7 +80,8 @@ public class Send extends AppCompatActivity {
                 String ms = msg_textView.getText().toString();
                 byte[] b = ms.getBytes();
                 bytesPayload = Payload.fromBytes(b);
-                connectionsClient.sendPayload(opponentEndpointId, bytesPayload);
+                SendThread st = new SendThread(connectionsClient, opponentEndpointId, bytesPayload);
+                st.start();
             }
         });
     }
