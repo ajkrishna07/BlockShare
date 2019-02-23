@@ -3,7 +3,9 @@ package com.ajay.blockshare;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.content.DialogInterface;
 import android.util.Log;
@@ -52,9 +54,10 @@ public class Receive extends AppCompatActivity {
     private final String codeName = CodenameGenerator.generate();
     private String opponentEndpointId;
     private String opponentName;
-    Context context;
-    TextView statusMessage;
-    NotificationManager notificationManager;
+    private Context context;
+    private TextView statusMessage;
+    private NotificationManager notificationManager;
+    private String CHANNEL_ID = "default";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +66,14 @@ public class Receive extends AppCompatActivity {
         statusMessage = findViewById(R.id.statmsg);
         context = this;
         notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Transfer";
+            String description = "Shows the progress of updates";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     @Override
@@ -194,7 +205,7 @@ public class Receive extends AppCompatActivity {
                 }
 
                 private NotificationCompat.Builder buildNotification(Payload payload, boolean isIncoming) {
-                    NotificationCompat.Builder notification = new NotificationCompat.Builder(context)
+                    NotificationCompat.Builder notification = new NotificationCompat.Builder(context, CHANNEL_ID)
                             .setContentTitle(isIncoming ? "Receiving..." : "Sending...")
                             .setSmallIcon(R.drawable.common_google_signin_btn_icon_dark);
                     boolean indeterminate = false;
