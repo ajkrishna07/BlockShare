@@ -81,6 +81,8 @@ public class Send extends AppCompatActivity {
         file_select_button = findViewById(R.id.file_select_button);
         file_send_button = findViewById(R.id.file_send_button);
         statusTextView = findViewById(R.id.statusTextView);
+        file_send_button.setEnabled(false);
+        file_select_button.setEnabled(false);
     }
 
     @Override
@@ -115,8 +117,7 @@ public class Send extends AppCompatActivity {
                     Log.e("MyApp", "File not found", e);
                     return;
                 }
-
-                // Construct a simple message mapping the ID of the file payload to the desired filename.
+                filenameBytesPayload = Payload.fromBytes(filenameMessage.getBytes());
                 connectionsClient.sendPayload(opponentEndpointId, filenameBytesPayload);
                 connectionsClient.sendPayload(opponentEndpointId, filePayload);
                 Log.e("My App", "Payload Sent");
@@ -144,7 +145,7 @@ public class Send extends AppCompatActivity {
                     cursor.close();
                 }
             }
-            filenameBytesPayload = Payload.fromBytes(filenameMessage.getBytes());
+            file_send_button.setEnabled(true);
             Log.e("My App", filenameMessage);
             Log.e("My App", opponentEndpointId);
         }
@@ -237,6 +238,7 @@ public class Send extends AppCompatActivity {
                         int duration = Toast.LENGTH_SHORT;
                         Toast toast = Toast.makeText(context, text, duration);
                         toast.show();
+                        file_select_button.setEnabled(true);
                     }
                 }
 
