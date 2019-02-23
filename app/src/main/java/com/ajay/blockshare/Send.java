@@ -3,8 +3,14 @@ package com.ajay.blockshare;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.DialogInterface;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
+import android.provider.OpenableColumns;
 import android.widget.Button;
 import android.view.View;
 import android.content.Intent;
@@ -17,6 +23,8 @@ import android.content.pm.PackageManager;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.collection.SimpleArrayMap;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import android.content.Context;
 import com.google.android.gms.nearby.Nearby;
@@ -34,6 +42,10 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate.Status;
 import com.google.android.gms.nearby.connection.Strategy;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.nio.charset.StandardCharsets;
+
 public class Send extends AppCompatActivity {
 
     private static final String[] REQUIRED_PERMISSIONS =
@@ -43,6 +55,7 @@ public class Send extends AppCompatActivity {
                     Manifest.permission.ACCESS_WIFI_STATE,
                     Manifest.permission.CHANGE_WIFI_STATE,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
             };
     private static final int REQUEST_CODE_REQUIRED_PERMISSIONS = 1;
     private static final Strategy STRATEGY = Strategy.P2P_STAR;
@@ -51,17 +64,23 @@ public class Send extends AppCompatActivity {
     private String opponentEndpointId;
     private String opponentName;
     Context context = this;
-    private Button msg_send_button;
-    private EditText msg_textView;
-    private Payload bytesPayload;
+    private Button file_select_button;
+    private Button file_send_button;
+    private TextView statusTextView;
+    private static final int READ_REQUEST_CODE = 42;
+    Uri uri;
+    Payload filePayload;
+    Payload filenameBytesPayload;
+    String filenameMessage;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_send);
-        msg_send_button = findViewById(R.id.msg_send_button);
-        msg_textView = findViewById(R.id.editText);
+        file_select_button = findViewById(R.id.file_select_button);
+        file_send_button = findViewById(R.id.file_send_button);
+        statusTextView = findViewById(R.id.statusTextView);
     }
 
     @Override
@@ -75,15 +94,60 @@ public class Send extends AppCompatActivity {
 
         startDiscovery();
 
-        msg_send_button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View sv) {
-                String ms = msg_textView.getText().toString();
-                byte[] b = ms.getBytes();
-                bytesPayload = Payload.fromBytes(b);
-                SendThread st = new SendThread(connectionsClient, opponentEndpointId, bytesPayload);
-                st.start();
+        file_select_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                startActivityForResult(intent, READ_REQUEST_CODE);
             }
         });
+
+        file_send_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                try {
+                    // Open the ParcelFileDescriptor for this URI with read access.
+                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(uri, "r");
+                    filePayload = Payload.fromFile(pfd);
+                } catch (FileNotFoundException e) {
+                    Log.e("MyApp", "File not found", e);
+                    return;
+                }
+
+                // Construct a simple message mapping the ID of the file payload to the desired filename.
+                connectionsClient.sendPayload(opponentEndpointId, filenameBytesPayload);
+                connectionsClient.sendPayload(opponentEndpointId, filePayload);
+                Log.e("My App", "Payload Sent");
+                //SendThread st = new SendThread(connectionsClient, opponentEndpointId, filePayload);
+                //st.start();
+            }
+        });
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        if (requestCode == READ_REQUEST_CODE
+                && resultCode == Activity.RESULT_OK
+                && resultData != null) {
+
+            // The URI of the file selected by the user.
+            uri = resultData.getData();
+            if (uri.getScheme().equals("content")) {
+                Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+                try {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        filenameMessage = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                    }
+                } finally {
+                    cursor.close();
+                }
+            }
+            filenameBytesPayload = Payload.fromBytes(filenameMessage.getBytes());
+            Log.e("My App", filenameMessage);
+            Log.e("My App", opponentEndpointId);
+        }
     }
 
     @Override
@@ -168,6 +232,7 @@ public class Send extends AppCompatActivity {
                         connectionsClient.stopDiscovery();
                         connectionsClient.stopAdvertising();
                         opponentEndpointId = endpointId;
+                        statusTextView.setText("Connected to "+opponentEndpointId);
                         String text = "Connection established with " + opponentEndpointId;
                         int duration = Toast.LENGTH_SHORT;
                         Toast toast = Toast.makeText(context, text, duration);

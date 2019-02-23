@@ -7,16 +7,22 @@
     android:orientation="vertical"
     tools:context=".Send">
 
-    <EditText
-        android:id="@+id/editText"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/statusTextView"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:ems="10"
+        android:gravity="center_horizontal"
         android:inputType="textPersonName"
-        android:hint="Enter message" />
+        android:text="Discovering advertisers..." />
 
     <Button
-        android:id="@+id/msg_send_button"
+        android:id="@+id/file_select_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/select_file_button" />
+
+    <Button
+        android:id="@+id/file_send_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/send_button_name" />

@@ -2,8 +2,11 @@ package com.ajay.blockshare;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.app.NotificationManager;
 import android.os.Bundle;
 import android.content.DialogInterface;
+import android.util.Log;
 import android.widget.Button;
 import android.view.View;
 import android.content.Intent;
@@ -13,6 +16,8 @@ import android.widget.Toast;
 import android.content.pm.PackageManager;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
+import androidx.collection.SimpleArrayMap;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import android.content.Context;
 import com.google.android.gms.nearby.Nearby;
@@ -28,6 +33,9 @@ import com.google.android.gms.nearby.connection.PayloadCallback;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+
 public class Receive extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS =
             new String[] {
@@ -36,6 +44,7 @@ public class Receive extends AppCompatActivity {
                     Manifest.permission.ACCESS_WIFI_STATE,
                     Manifest.permission.CHANGE_WIFI_STATE,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
             };
     private static final int REQUEST_CODE_REQUIRED_PERMISSIONS = 1;
     private static final Strategy STRATEGY = Strategy.P2P_STAR;
@@ -162,19 +171,27 @@ public class Receive extends AppCompatActivity {
 
     private final PayloadCallback payloadCallback =
             new PayloadCallback() {
+                String filename = "generic.jpg";
+                File payloadFile;
+
                 @Override
                 public void onPayloadReceived(String endpointId, Payload payload) {
-                    byte[] receivedBytes = payload.asBytes();
-                    Context context = getApplicationContext();
-                    String text = new String(receivedBytes);
-                    int duration = Toast.LENGTH_SHORT;
-                    Toast toast = Toast.makeText(context, text, duration);
-                    toast.show();
+                    Log.e("My App", "Received");
+                    if (payload.getType() == Payload.Type.BYTES) {
+                        filename = new String(payload.asBytes());
+                    } else if(payload.getType() == Payload.Type.FILE) {
+                        payloadFile = payload.asFile().asJavaFile();
+                    }
                 }
 
                 @Override
                 public void onPayloadTransferUpdate(String endpointId, PayloadTransferUpdate update) {
-                    //
+                    if (update.getStatus() == PayloadTransferUpdate.Status.SUCCESS) {
+                        Log.e("My App", "Success");
+                        if(payloadFile != null) {
+                            payloadFile.renameTo(new File(payloadFile.getParentFile(), filename));
+                        }
+                    }
                 }
             };
 }

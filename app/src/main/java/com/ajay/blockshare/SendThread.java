@@ -7,15 +7,15 @@ import com.google.android.gms.nearby.connection.Payload;
 public class SendThread extends Thread {
 
     private String opponentEndpointId;
-    private Payload bytesPayload;
+    private Payload payload;
     private ConnectionsClient connectionsClient;
 
     SendThread(ConnectionsClient cc, String epid, Payload pl) {
         this.connectionsClient = cc;
         this.opponentEndpointId = epid;
-        this.bytesPayload = pl;
+        this.payload = pl;
     }
     public void run() {
-        connectionsClient.sendPayload(opponentEndpointId, bytesPayload);
+        connectionsClient.sendPayload(opponentEndpointId, payload);
     }
 }
