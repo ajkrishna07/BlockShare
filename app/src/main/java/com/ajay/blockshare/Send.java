@@ -82,6 +82,12 @@ public class Send extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        connectionsClient = Nearby.getConnectionsClient(this);
+
+        if (!hasPermissions(this, REQUIRED_PERMISSIONS)) {
+            requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);
+        }
+        startDiscovery();
         setContentView(R.layout.activity_send);
         file_select_button = findViewById(R.id.file_select_button);
         file_send_button = findViewById(R.id.file_send_button);
@@ -102,13 +108,6 @@ public class Send extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        connectionsClient = Nearby.getConnectionsClient(this);
-
-        if (!hasPermissions(this, REQUIRED_PERMISSIONS)) {
-            requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);
-        }
-
-        startDiscovery();
 
         file_select_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -274,8 +273,13 @@ public class Send extends AppCompatActivity {
 
                 @Override
                 public void onDisconnected(String endpointId) {
-                    // We've been disconnected from this endpoint. No more data can be
-                    // sent or received.
+                    statusTextView.setText("Connection lost");
+                    String text = "Connection lost";
+                    int duration = Toast.LENGTH_SHORT;
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                    file_select_button.setEnabled(false);
+                    file_send_button.setEnabled(false);
                 }
             };
 

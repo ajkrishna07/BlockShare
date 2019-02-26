@@ -74,11 +74,6 @@ public class Receive extends AppCompatActivity {
             channel.setDescription(description);
             notificationManager.createNotificationChannel(channel);
         }
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
         connectionsClient = Nearby.getConnectionsClient(this);
 
         if (!hasPermissions(this, REQUIRED_PERMISSIONS)) {
@@ -86,6 +81,12 @@ public class Receive extends AppCompatActivity {
         }
 
         startAdvertising();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
     }
 
     @Override
@@ -178,8 +179,9 @@ public class Receive extends AppCompatActivity {
 
                 @Override
                 public void onDisconnected(String endpointId) {
-                    // We've been disconnected from this endpoint. No more data can be
-                    // sent or received.
+                    statusMessage.setText("Connection lost");
+                    Toast toast = Toast.makeText(context, "Connection lost", Toast.LENGTH_LONG);
+                    toast.show();
                 }
             };
 
