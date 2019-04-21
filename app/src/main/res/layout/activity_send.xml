@@ -9,9 +9,9 @@
 
     <TextView
         android:id="@+id/statusTextView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
+        android:gravity="center"
         android:inputType="textPersonName"
         android:text="Discovering advertisers..." />
 
@@ -20,6 +20,40 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/select_file_button" />
+
+    <TextView
+        android:id="@+id/selectedFile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No file selected" />
+
+    <EditText
+        android:id="@+id/senderId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Enter Sender Email"
+        android:inputType="textEmailAddress" />
+
+    <EditText
+        android:id="@+id/receiverId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Enter Receiver Email"
+        android:inputType="textEmailAddress" />
+
+    <Button
+        android:id="@+id/gen_bc_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Generate Block Contract" />
+
+    <Button
+        android:id="@+id/bc_send_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Send Block Contract" />
 
     <Button
         android:id="@+id/file_send_button"

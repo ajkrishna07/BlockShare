@@ -44,16 +44,21 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate.Status;
 import com.google.android.gms.nearby.connection.Strategy;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -80,8 +85,13 @@ public class Send extends AppCompatActivity {
     private String opponentName;
     Context context = this;
     private Button file_select_button;
+    private Button generate_bc_button;
+    private Button bc_send_button;
     private Button file_send_button;
     private TextView statusTextView;
+    private TextView selectedFilename;
+    private EditText sid;
+    private EditText rid;
     private static final int READ_REQUEST_CODE = 42;
     Uri uri;
     Payload filePayload;
@@ -89,6 +99,8 @@ public class Send extends AppCompatActivity {
     String filenameMessage;
     String keyStr;
     String fileHash;
+    String bcId;
+    Timestamp ts;
     private NotificationManager notificationManager;
     private String CHANNEL_ID = "default";
     private final SimpleArrayMap<Long, NotificationCompat.Builder> outgoingPayloads = new SimpleArrayMap<>();
@@ -104,11 +116,18 @@ public class Send extends AppCompatActivity {
         }
         startDiscovery();
         setContentView(R.layout.activity_send);
+        sid = findViewById(R.id.senderId);
+        rid = findViewById(R.id.receiverId);
         file_select_button = findViewById(R.id.file_select_button);
         file_send_button = findViewById(R.id.file_send_button);
         statusTextView = findViewById(R.id.statusTextView);
+        selectedFilename = findViewById(R.id.selectedFile);
+        bc_send_button = findViewById(R.id.bc_send_button);
+        generate_bc_button = findViewById(R.id.gen_bc_button);
         file_send_button.setEnabled(false);
         file_select_button.setEnabled(false);
+        bc_send_button.setEnabled(false);
+        generate_bc_button.setEnabled(false);
         notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Transfer";
@@ -131,6 +150,80 @@ public class Send extends AppCompatActivity {
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
                 startActivityForResult(intent, READ_REQUEST_CODE);
+            }
+        });
+
+        generate_bc_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                String data;
+                Timestamp ts = new Timestamp(System.currentTimeMillis());
+                data = sid.getText().toString();
+                data += rid.getText().toString();
+                data += fileHash;
+                data += filenameMessage;
+                data += keyStr;
+                data += ts.getTime();
+                MessageDigest md = null;
+                try {
+                    md = MessageDigest.getInstance("SHA-1");
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+                byte[] digest = md.digest(data.getBytes());
+                StringBuilder sb = new StringBuilder();
+                for(int i=0; i< digest.length ;i++)
+                {
+                    sb.append(Integer.toString((digest[i] & 0xff) + 0x100, 16).substring(1));
+                }
+                bcId = sb.toString();
+                JSONObject bc = new JSONObject();
+                try {
+                    bc.put("bcid", bcId);
+                    bc.put("sid", sid.getText().toString());
+                    bc.put("rid", rid.getText().toString());
+                    bc.put("fhash", fileHash);
+                    bc.put("fname",filenameMessage);
+                    bc.put("key", keyStr);
+                    bc.put("timestamp", ts.getTime());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                try (FileWriter file = new FileWriter("//sdcard//Download//" + bcId + ".json")) {
+
+                    file.write(bc.toString());
+                    file.flush();
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                bc_send_button.setEnabled(true);
+
+            }
+        });
+
+        bc_send_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                try {
+                    // Open the ParcelFileDescriptor for this URI with read access.
+                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(Uri.fromFile(new File("//sdcard//Download//" + bcId + ".json")), "r");
+                    filePayload = Payload.fromFile(pfd);
+                } catch (FileNotFoundException e) {
+                    Log.e("MyApp", "File not found", e);
+                    return;
+                }
+                filenameBytesPayload = Payload.fromBytes((bcId + ".json").getBytes());
+                Log.e("My App", "Payload Sent");
+                NotificationCompat.Builder notification = buildNotification(filePayload, /*isIncoming=*/ false);
+                notificationManager.notify((int) filePayload.getId(), notification.build());
+                outgoingPayloads.put(filePayload.getId(), notification);
+                connectionsClient.sendPayload(opponentEndpointId, filenameBytesPayload);
+                connectionsClient.sendPayload(opponentEndpointId, filePayload);
+                //SendThread st = new SendThread(connectionsClient, opponentEndpointId, filePayload);
+                //st.start();
+                file_send_button.setEnabled(true);
             }
         });
 
@@ -184,13 +277,13 @@ public class Send extends AppCompatActivity {
                 try {
                     if (cursor != null && cursor.moveToFirst()) {
                         filenameMessage = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                        selectedFilename.setText("Selected file: " + filenameMessage);
                     }
                 } finally {
                     cursor.close();
                 }
             }
-
-            file_send_button.setEnabled(true);
+            Log.e("Filename", filenameMessage);
 
             try {
                 encryptFile();
@@ -199,6 +292,7 @@ public class Send extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            Log.e("Key", keyStr);
 
             try {
                 fileHash = getDigest();
@@ -207,9 +301,9 @@ public class Send extends AppCompatActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            Log.e("Filename", filenameMessage);
             Log.e("File Hash", fileHash);
+
+            generate_bc_button.setEnabled(true);
         }
     }
 

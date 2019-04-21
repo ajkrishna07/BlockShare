@@ -2,7 +2,7 @@
     <string name="app_name">BlockShare</string>
     <string name="action_settings">Settings</string>
     <string name="send_receive_title">Send and Receive Files</string>
-    <string name="send_button_name">Send</string>
+    <string name="send_button_name">Send file</string>
     <string name="select_file_button">Select file...</string>
     <string name="receive_button_name">Receive</string>
     <string name="error_missing_permissions">Cannot start without required permissions</string>
