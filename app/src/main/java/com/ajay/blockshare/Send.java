@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
@@ -80,7 +81,6 @@ public class Send extends AppCompatActivity {
     Context context = this;
     private Button file_select_button;
     private Button file_send_button;
-    private Button encrypt_file_button;
     private TextView statusTextView;
     private static final int READ_REQUEST_CODE = 42;
     Uri uri;
@@ -88,6 +88,7 @@ public class Send extends AppCompatActivity {
     Payload filenameBytesPayload;
     String filenameMessage;
     String keyStr;
+    String fileHash;
     private NotificationManager notificationManager;
     private String CHANNEL_ID = "default";
     private final SimpleArrayMap<Long, NotificationCompat.Builder> outgoingPayloads = new SimpleArrayMap<>();
@@ -105,8 +106,6 @@ public class Send extends AppCompatActivity {
         setContentView(R.layout.activity_send);
         file_select_button = findViewById(R.id.file_select_button);
         file_send_button = findViewById(R.id.file_send_button);
-        encrypt_file_button = findViewById(R.id.encrypt_button);
-        encrypt_file_button.setEnabled(false);
         statusTextView = findViewById(R.id.statusTextView);
         file_send_button.setEnabled(false);
         file_select_button.setEnabled(false);
@@ -140,13 +139,13 @@ public class Send extends AppCompatActivity {
 
                 try {
                     // Open the ParcelFileDescriptor for this URI with read access.
-                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(uri, "r");
+                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(Uri.fromFile(new File("//sdcard//Download//" + filenameMessage + ".enc")), "r");
                     filePayload = Payload.fromFile(pfd);
                 } catch (FileNotFoundException e) {
                     Log.e("MyApp", "File not found", e);
                     return;
                 }
-                filenameBytesPayload = Payload.fromBytes(filenameMessage.getBytes());
+                filenameBytesPayload = Payload.fromBytes((filenameMessage + ".enc").getBytes());
                 Log.e("My App", "Payload Sent");
                 NotificationCompat.Builder notification = buildNotification(filePayload, /*isIncoming=*/ false);
                 notificationManager.notify((int) filePayload.getId(), notification.build());
@@ -155,18 +154,6 @@ public class Send extends AppCompatActivity {
                 connectionsClient.sendPayload(opponentEndpointId, filePayload);
                 //SendThread st = new SendThread(connectionsClient, opponentEndpointId, filePayload);
                 //st.start();
-            }
-        });
-
-        encrypt_file_button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    encryptFile();
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
         });
     }
@@ -202,11 +189,27 @@ public class Send extends AppCompatActivity {
                     cursor.close();
                 }
             }
+
             file_send_button.setEnabled(true);
-            encrypt_file_button.setEnabled(true);
-            Log.e("My App", filenameMessage);
-            Log.e("My App", opponentEndpointId);
-            Log.e("My App", uri.getPath());
+
+            try {
+                encryptFile();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                fileHash = getDigest();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            Log.e("Filename", filenameMessage);
+            Log.e("File Hash", fileHash);
         }
     }
 
@@ -401,15 +404,15 @@ public class Send extends AppCompatActivity {
         byte[] content = getFile();
 
         byte[] encrypted = encryptPdfFile(key, content);
-        saveFile(encrypted, "//sdcard//Download//baz.enc");
+        saveFile(encrypted, "//sdcard//Download//" + filenameMessage + ".enc");
 
-        byte[] decodedKey = Base64.getDecoder().decode(keyStr);
+        /*byte[] decodedKey = Base64.getDecoder().decode(keyStr);
         SecretKey secretKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
         byte[] decrypted = decryptPdfFile(secretKey, "//sdcard//Download//baz.enc");
-        saveFile(decrypted, "//sdcard//Download//" + filenameMessage);
+        saveFile(decrypted, "//sdcard//Download//" + filenameMessage);*/
     }
 
-    private byte[] getFile() {
+    private byte[] getFile() throws IOException {
 
         InputStream is = null;
         try {
@@ -431,6 +434,7 @@ public class Send extends AppCompatActivity {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        is.close();
 
         return content;
     }
@@ -449,7 +453,7 @@ public class Send extends AppCompatActivity {
 
     }
 
-    private byte[] decryptPdfFile(Key key, String filepath) {
+    private byte[] decryptPdfFile(Key key, String filepath) throws IOException {
         Cipher cipher;
         byte[] textCryp = getEncryptedFile(filepath);
         byte[] decrypted = null;
@@ -464,7 +468,7 @@ public class Send extends AppCompatActivity {
         return decrypted;
     }
 
-    public static byte[] getEncryptedFile(String filename) {
+    private static byte[] getEncryptedFile(String filename) throws IOException {
 
         File f = new File(filename);
         InputStream is = null;
@@ -487,15 +491,36 @@ public class Send extends AppCompatActivity {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        is.close();
 
         return content;
     }
 
-    public static void saveFile(byte[] bytes, String filenamepath) throws IOException {
+    private static void saveFile(byte[] bytes, String filenamepath) throws IOException {
 
         FileOutputStream fos = new FileOutputStream(filenamepath);
         fos.write(bytes);
         fos.close();
 
+    }
+
+    private String getDigest() throws NoSuchAlgorithmException, IOException {
+
+        InputStream is = getContentResolver().openInputStream(uri);
+        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        md.reset();
+        byte[] bytes = new byte[2048];
+        int numBytes;
+        while ((numBytes = is.read(bytes)) != -1) {
+            md.update(bytes, 0, numBytes);
+        }
+        byte[] digest = md.digest();
+        StringBuilder sb = new StringBuilder();
+        for(int i=0; i< digest.length ;i++)
+        {
+            sb.append(Integer.toString((digest[i] & 0xff) + 0x100, 16).substring(1));
+        }
+        is.close();
+        return sb.toString();
     }
 }
