@@ -35,8 +35,24 @@ import com.google.android.gms.nearby.connection.PayloadCallback;
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Base64;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Receive extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS =
@@ -58,6 +74,7 @@ public class Receive extends AppCompatActivity {
     private TextView statusMessage;
     private NotificationManager notificationManager;
     private String CHANNEL_ID = "default";
+    private String jsonfilename;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -277,6 +294,36 @@ public class Receive extends AppCompatActivity {
                             Log.e("My App", "Success");
                             if(payloadFile != null) {
                                 payloadFile.renameTo(new File(payloadFile.getParentFile(), filename));
+                                if(filename.substring(filename.length()-4).equals("json")) {
+                                    jsonfilename = filename;
+                                    Log.e("filename", filename);
+                                }
+                                else if(filename.substring(filename.length()-3).equals("enc")) {
+                                    JSONObject jsonParser = null;
+                                    String data = null;
+                                    BufferedReader br = null;
+                                    String key;
+                                    File file = new File("//sdcard//Download//Nearby//" + jsonfilename);
+                                    try {
+                                        br = new BufferedReader(new FileReader(file));
+                                        data = br.readLine();
+                                        Log.e("JSON", data);
+                                        jsonParser = new JSONObject(data);
+                                        key = (String) jsonParser.get("key");
+                                        byte[] decodedKey = Base64.getDecoder().decode(key);
+                                        SecretKey secretKey = new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+                                        byte[] decrypted = decryptPdfFile(secretKey, "//sdcard//Download//Nearby//" + filename);
+                                        saveFile(decrypted, "//sdcard//Download//Nearby//" + jsonParser.get("fname"));
+                                        br.close();
+                                    } catch (FileNotFoundException e) {
+                                        e.printStackTrace();
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+
+                                }
                             }
                             break;
                         case PayloadTransferUpdate.Status.FAILURE:
@@ -288,6 +335,56 @@ public class Receive extends AppCompatActivity {
                     }
 
                     notificationManager.notify((int) payloadId, notification.build());
+                }
+                private byte[] decryptPdfFile(Key key, String filepath) throws IOException {
+                    Cipher cipher;
+                    byte[] textCryp = getEncryptedFile(filepath);
+                    byte[] decrypted = null;
+                    try {
+                        cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                        cipher.init(Cipher.DECRYPT_MODE, key);
+                        decrypted = cipher.doFinal(textCryp);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    return decrypted;
+                }
+
+                private byte[] getEncryptedFile(String filename) throws IOException {
+
+                    File f = new File(filename);
+                    InputStream is = null;
+                    try {
+                        is = new FileInputStream(f);
+                    } catch (FileNotFoundException e2) {
+                        // TODO Auto-generated catch block
+                        e2.printStackTrace();
+                    }
+                    byte[] content = null;
+                    try {
+                        content = new byte[is.available()];
+                    } catch (IOException e1) {
+                        // TODO Auto-generated catch block
+                        e1.printStackTrace();
+                    }
+                    try {
+                        is.read(content);
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    is.close();
+
+                    return content;
+                }
+
+                private void saveFile(byte[] bytes, String filenamepath) throws IOException {
+
+                    FileOutputStream fos = new FileOutputStream(filenamepath);
+                    fos.write(bytes);
+                    fos.close();
+
                 }
             };
 }
