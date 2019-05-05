@@ -98,6 +98,7 @@ public class Send extends AppCompatActivity {
     Payload filenameBytesPayload;
     String filenameMessage;
     String keyStr;
+    String bkeyStr;
     String fileHash;
     String bcId;
     Timestamp ts;
@@ -198,6 +199,47 @@ public class Send extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
+                KeyGenerator keyGenerator = null;
+                try {
+                    keyGenerator = KeyGenerator.getInstance("AES");
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+                keyGenerator.init(128);
+                Key bkey = keyGenerator.generateKey();
+                byte encoded[] = bkey.getEncoded();
+                bkeyStr = Base64.getEncoder().encodeToString(encoded);
+                InputStream isb = null;
+                try {
+                    isb = new FileInputStream("//sdcard//Download//" + bcId + ".json");
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+                byte[] content = null;
+                try {
+                    content = new byte[isb.available()];
+                } catch (IOException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+                try {
+                    isb.read(content);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                try {
+                    isb.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                byte[] encrypted = encryptPdfFile(bkey, content);
+                try {
+                    saveFile(encrypted, "//sdcard//Download//" + bcId + ".json.enc");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
                 bc_send_button.setEnabled(true);
 
             }
@@ -208,13 +250,13 @@ public class Send extends AppCompatActivity {
 
                 try {
                     // Open the ParcelFileDescriptor for this URI with read access.
-                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(Uri.fromFile(new File("//sdcard//Download//" + bcId + ".json")), "r");
+                    ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(Uri.fromFile(new File("//sdcard//Download//" + bcId + ".json.enc")), "r");
                     filePayload = Payload.fromFile(pfd);
                 } catch (FileNotFoundException e) {
                     Log.e("MyApp", "File not found", e);
                     return;
                 }
-                filenameBytesPayload = Payload.fromBytes((bcId + ".json").getBytes());
+                filenameBytesPayload = Payload.fromBytes((bcId + ".json.enc").getBytes());
                 Log.e("My App", "Payload Sent");
                 NotificationCompat.Builder notification = buildNotification(filePayload, /*isIncoming=*/ false);
                 notificationManager.notify((int) filePayload.getId(), notification.build());
