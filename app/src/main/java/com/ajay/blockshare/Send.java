@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.os.StrictMode;
 import android.provider.OpenableColumns;
 import android.widget.Button;
 import android.view.View;
@@ -47,6 +48,8 @@ import com.google.android.gms.nearby.connection.Strategy;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -54,6 +57,9 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -76,6 +82,7 @@ public class Send extends AppCompatActivity {
                     Manifest.permission.CHANGE_WIFI_STATE,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.INTERNET,
             };
     private static final int REQUEST_CODE_REQUIRED_PERMISSIONS = 1;
     private static final Strategy STRATEGY = Strategy.P2P_STAR;
@@ -266,6 +273,31 @@ public class Send extends AppCompatActivity {
                 //SendThread st = new SendThread(connectionsClient, opponentEndpointId, filePayload);
                 //st.start();
                 file_send_button.setEnabled(true);
+
+                StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+
+                StrictMode.setThreadPolicy(policy);
+
+                Socket socket = null;
+                DataInputStream input = null;
+                DataOutputStream out = null;
+
+                try
+                {
+                    socket = new Socket("192.168.0.105", 5000);
+                    out = new DataOutputStream(socket.getOutputStream());
+                    out.writeUTF(bcId + ": " + bkeyStr);
+                    socket.close();
+                    out.close();
+                }
+                catch(UnknownHostException u)
+                {
+                    Log.e("Connection", "error");
+                }
+                catch(IOException e)
+                {
+                    Log.e("Connection", e.toString());
+                }
             }
         });
 
