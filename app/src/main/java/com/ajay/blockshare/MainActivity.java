@@ -19,16 +19,21 @@ import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.Key;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -220,15 +225,86 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Toast fail_toast = Toast.makeText(context, "Block Contract Successfully Decrypted", Toast.LENGTH_SHORT);
+
+        JSONObject jsonParser = null;
+        String data = null;
+        BufferedReader br = null;
+        String fkey;
+        String filename;
+        File file = new File("//sdcard//Download//" + dname);
+        try {
+            br = new BufferedReader(new FileReader(file));
+            data = br.readLine();
+            Log.e("JSON", data);
+            jsonParser = new JSONObject(data);
+            fkey = (String) jsonParser.get("key");
+            filename = (String) jsonParser.get("fname");
+            filename += ".enc";
+            byte[] decodedkey = Base64.getDecoder().decode(fkey);
+            SecretKey secretKey = new SecretKeySpec(decodedkey, 0, decodedkey.length, "AES");
+            decrypted = decryptPdfFile(secretKey, "//sdcard//Download//Nearby//" + filename);
+            saveFile(decrypted, "//sdcard//Download//" + jsonParser.get("fname"));
+            br.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Toast fail_toast = Toast.makeText(context, "Block Contract and Asset Successfully Decrypted", Toast.LENGTH_SHORT);
         fail_toast.show();
 
     }
+
     private void saveFile(byte[] bytes, String filenamepath) throws IOException {
 
         FileOutputStream fos = new FileOutputStream(filenamepath);
         fos.write(bytes);
         fos.close();
 
+    }
+
+    private byte[] decryptPdfFile(Key key, String filepath) throws IOException {
+        Cipher cipher;
+        byte[] textCryp = getEncryptedFile(filepath);
+        byte[] decrypted = null;
+        try {
+            cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, key);
+            decrypted = cipher.doFinal(textCryp);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return decrypted;
+    }
+
+    private byte[] getEncryptedFile(String filename) throws IOException {
+
+        File f = new File(filename);
+        InputStream is = null;
+        try {
+            is = new FileInputStream(f);
+        } catch (FileNotFoundException e2) {
+            // TODO Auto-generated catch block
+            e2.printStackTrace();
+        }
+        byte[] content = null;
+        try {
+            content = new byte[is.available()];
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        try {
+            is.read(content);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        is.close();
+
+        return content;
     }
 }
