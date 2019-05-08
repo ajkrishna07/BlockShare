@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         Log.e("Error", "X");
         URL url = null;
         try {
-            url = new URL("http://192.168.0.105/main.txt");
+            url = new URL("http://192.168.0.105/main.bc");
         } catch (MalformedURLException e) {
             Log.e("Error", "1");
         }

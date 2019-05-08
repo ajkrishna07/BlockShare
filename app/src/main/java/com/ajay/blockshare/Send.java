@@ -247,6 +247,7 @@ public class Send extends AppCompatActivity {
                     e.printStackTrace();
                 }
 
+                Toast.makeText(context, "Block Contract Generated", Toast.LENGTH_LONG).show();
                 bc_send_button.setEnabled(true);
 
             }
