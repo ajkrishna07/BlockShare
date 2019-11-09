@@ -1,4 +1,4 @@
-Undergraduate graduation project
+BlockShare: Undergraduate graduation project
 =========
 
 ## Intellectual Property Managment Using Blockhain
